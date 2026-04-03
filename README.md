@@ -21,36 +21,36 @@ npm run dev
 
 推荐直接用 Docker 部署，这样环境最稳定。
 
-1. 复制环境变量文件
-
-```bash
-cp .env.production.example .env.production
-```
-
-2. 首次部署时构建镜像
+1. 首次部署时构建镜像
 
 ```bash
 docker compose build
 ```
 
-3. 初始化数据库
+2. 初始化数据库
 
 ```bash
 docker compose run --rm app npm run db:push
 ```
 
-4. 如果你想保留演示菜单数据，再执行一次种子数据
+3. 如果你想保留演示菜单数据，再执行一次种子数据
 
 ```bash
 docker compose run --rm app npm run db:seed
 ```
 
-5. 启动服务
+4. 启动服务
 
 ```bash
 docker compose up -d
 ```
 
 服务默认监听 `3000` 端口，数据库文件会持久化到服务器上的 `./data/menu.db`。
+
+如果你想自定义数据库路径，可以在执行 `docker compose` 之前先设置 `MENU_DATABASE_URL`，或者自行创建 `.env.production`：
+
+```bash
+echo 'MENU_DATABASE_URL=file:/app/data/menu.db' > .env.production
+```
 
 如果你前面还有 Nginx，可以把域名反代到 `http://127.0.0.1:3000`。

@@ -5,8 +5,8 @@ services:
       dockerfile: Dockerfile
     container_name: charene-menu
     restart: unless-stopped
-    env_file:
-      - .env.production
+    environment:
+      DATABASE_URL: ${MENU_DATABASE_URL:-file:/app/data/menu.db}
     ports:
       - "3000:3000"
     volumes:

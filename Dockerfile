@@ -2,7 +2,6 @@ FROM node:20-bookworm-slim
 
 WORKDIR /app
 
-ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY package.json package-lock.json ./
@@ -12,6 +11,8 @@ COPY . .
 
 RUN mkdir -p /app/data
 RUN npm run build
+
+ENV NODE_ENV=production
 
 EXPOSE 3000
 
