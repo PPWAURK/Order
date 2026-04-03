@@ -25,6 +25,7 @@ import {
   getCategoryStory,
   hexToRgba,
 } from "@/lib/catalog-data";
+import { CategoryRoulette } from "@/components/category-roulette";
 import { CategoryIcon } from "@/lib/icon-map";
 import type { MenuCategory } from "@/lib/types";
 
@@ -472,6 +473,7 @@ export function MenuExperience({ categories }: MenuExperienceProps) {
                   <p className="mt-4 text-sm leading-7 text-[#8a685d]">
                     {story.detail}
                   </p>
+                  <CategoryRoulette category={category} onAddProduct={addProduct} />
                 </div>
 
                 <div className="space-y-5">
