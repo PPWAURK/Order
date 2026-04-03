@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fffaf4;
+  --foreground: #2f241f;
+  --font-sans: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+    "Source Han Sans SC", sans-serif;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-fredoka);
+}
+
+* {
+  border-color: rgba(120, 86, 70, 0.12);
+}
+
+html {
+  background: var(--background);
+  color: var(--foreground);
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.55), transparent 28%),
+    linear-gradient(180deg, #fffaf4 0%, #fff4ea 100%);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: rgba(247, 190, 146, 0.45);
+  color: #2f241f;
+}
+
+button,
+a {
+  cursor: pointer;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: rgba(140, 100, 83, 0.24);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}

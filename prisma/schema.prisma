@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id         String    @id @default(cuid())
+  name       String
+  slug       String    @unique
+  icon       String
+  themeColor String
+  sortOrder  Int       @default(1)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  products   Product[]
+
+  @@index([sortOrder])
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  categoryId  String
+  name        String
+  description String
+  priceCents  Int
+  imageUrl    String?
+  badge       String?
+  isAvailable Boolean  @default(true)
+  sortOrder   Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([categoryId, sortOrder])
+}
