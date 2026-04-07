@@ -20,7 +20,7 @@ export function ConfirmActionButton({
   confirmMessage,
   fields,
   label,
-  pendingLabel = "处理中...",
+  pendingLabel = "Traitement...",
 }: ConfirmActionButtonProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();

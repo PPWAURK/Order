@@ -37,3 +37,23 @@ model Product {
 
   @@index([categoryId, sortOrder])
 }
+
+model BudgetSettings {
+  id                String   @id @default("default")
+  monthlyBudgetCents Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model BudgetAllocation {
+  monthKey    String   @id
+  amountCents Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model OrderRecord {
+  id         String   @id @default(cuid())
+  totalCents Int
+  createdAt  DateTime @default(now())
+}

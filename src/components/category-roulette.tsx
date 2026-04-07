@@ -22,15 +22,20 @@ function normalizeRotation(value: number) {
   return ((value % 360) + 360) % 360;
 }
 
+function getSegmentAngle(segmentCount: number) {
+  return segmentCount > 0 ? 360 / segmentCount : 360;
+}
+
 function buildWheelGradient(segmentCount: number, themeColor: string) {
   if (segmentCount <= 0) {
     return buildSoftGradient(themeColor);
   }
 
-  const segmentAngle = 360 / segmentCount;
+  const segmentAngle = getSegmentAngle(segmentCount);
+  const gradientStart = -(segmentAngle / 2);
   const opacities = [0.2, 0.34, 0.26, 0.4];
 
-  return `conic-gradient(from -90deg, ${Array.from(
+  return `conic-gradient(from ${gradientStart}deg, ${Array.from(
     { length: segmentCount },
     (_, index) => {
       const start = index * segmentAngle;
@@ -49,47 +54,60 @@ export function CategoryRoulette({
   const [isSpinning, setIsSpinning] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<MenuProduct | null>(null);
   const [announcement, setAnnouncement] = useState(
-    `还没想好吃什么的话，就让 ${category.name} 转盘帮你选。`,
+    `Si vous hesitez encore, laissez la roue choisir dans ${category.name}.`,
   );
   const timerRef = useRef<number | null>(null);
+  const spinningRef = useRef(false);
 
   useEffect(() => {
     return () => {
-      if (timerRef.current) {
+      spinningRef.current = false;
+
+      if (timerRef.current !== null) {
         window.clearTimeout(timerRef.current);
+        timerRef.current = null;
       }
     };
   }, []);
 
   function handleSpin() {
-    if (isSpinning || category.products.length === 0) {
+    if (spinningRef.current || category.products.length === 0) {
       return;
     }
 
     const nextIndex = Math.floor(Math.random() * category.products.length);
     const product = category.products[nextIndex];
-    const segmentAngle = 360 / category.products.length;
-    const targetRotation =
-      (360 - (nextIndex * segmentAngle + segmentAngle / 2)) % 360;
-    const currentRotation = normalizeRotation(rotation);
-    const rotationDelta = (targetRotation - currentRotation + 360) % 360;
+    const segmentAngle = getSegmentAngle(category.products.length);
+    const targetRotation = (360 - nextIndex * segmentAngle) % 360;
     const extraTurns = (5 + Math.floor(Math.random() * 2)) * 360;
+
+    spinningRef.current = true;
+
+    if (timerRef.current !== null) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
 
     setIsSpinning(true);
     setSelectedProduct(null);
-    setAnnouncement(`正在帮你从 ${category.name} 里抽一份心动选项。`);
-    setRotation(rotation + extraTurns + rotationDelta);
+    setAnnouncement(`La roue choisit une option dans ${category.name}.`);
+    setRotation((currentValue) => {
+      const currentRotation = normalizeRotation(currentValue);
+      const rotationDelta = (targetRotation - currentRotation + 360) % 360;
+
+      return currentValue + extraTurns + rotationDelta;
+    });
 
     timerRef.current = window.setTimeout(() => {
+      timerRef.current = null;
+      spinningRef.current = false;
       setSelectedProduct(product);
       setIsSpinning(false);
-      setAnnouncement(`在 ${category.name} 里抽中了 ${product.name}。`);
+      setAnnouncement(`${product.name} a ete tire dans ${category.name}.`);
     }, SPIN_DURATION_MS);
   }
 
-  const segmentAngle = category.products.length
-    ? 360 / category.products.length
-    : 360;
+  const segmentAngle = getSegmentAngle(category.products.length);
 
   return (
     <div
@@ -101,25 +119,28 @@ export function CategoryRoulette({
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold tracking-[0.24em] text-[#9e6f5d] uppercase">
-            随机转盘
+            Roulette
           </p>
           <h3 className="mt-2 font-display text-2xl text-[#3b2b23]">
-            不知道吃什么就抽一个
+            Un tirage pour choisir
           </h3>
         </div>
         <span
           className="inline-flex shrink-0 items-center rounded-full border border-white/70 px-3 py-1 text-xs font-semibold text-[#6a4c41]"
           style={{ background: hexToRgba(category.themeColor, 0.18) }}
         >
-          {category.products.length} 款可抽
+          {category.products.length} choix
         </span>
       </div>
 
       <div className="mt-5 flex justify-center">
         <div className="relative aspect-square w-full max-w-[280px]">
           <div
-            className="absolute left-1/2 top-0 z-20 h-0 w-0 -translate-x-1/2 border-x-[12px] border-t-0 border-b-[18px] border-x-transparent"
-            style={{ borderBottomColor: category.themeColor }}
+            className="absolute left-1/2 top-0 z-20 h-[18px] w-[24px] -translate-x-1/2"
+            style={{
+              backgroundColor: category.themeColor,
+              clipPath: "polygon(50% 100%, 0 0, 100% 0)",
+            }}
           />
 
           <motion.div
@@ -142,7 +163,7 @@ export function CategoryRoulette({
             <div className="absolute inset-[28%] flex items-center justify-center rounded-full border border-white/70 bg-white/78 text-center shadow-[0_10px_24px_rgba(138,95,76,0.1)] backdrop-blur">
               <div className="px-4">
                 <p className="text-[11px] font-semibold tracking-[0.22em] text-[#9b6956] uppercase">
-                  {isSpinning ? "抽取中" : "今日手气"}
+                  {isSpinning ? "En cours" : "Chance du jour"}
                 </p>
                 <p className="mt-2 font-display text-2xl leading-none text-[#3d2b24]">
                   {isSpinning ? "..." : category.name}
@@ -151,12 +172,12 @@ export function CategoryRoulette({
             </div>
 
             {category.products.map((product, index) => {
-              const angle = index * segmentAngle + segmentAngle / 2;
+              const angle = index * segmentAngle;
 
               return (
                 <div
                   key={product.id}
-                  className="absolute left-1/2 top-1/2 w-[112px] -translate-x-1/2 -translate-y-1/2"
+                  className="absolute left-1/2 top-1/2 w-[112px]"
                   style={{
                     transform: `translate(-50%, -50%) rotate(${angle}deg) translateY(-105px)`,
                   }}
@@ -180,7 +201,7 @@ export function CategoryRoulette({
       <div className="mt-6 rounded-[28px] border border-white/70 bg-white/72 p-4 shadow-[0_14px_30px_rgba(145,101,83,0.08)] backdrop-blur">
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs font-semibold tracking-[0.24em] text-[#9a6b59] uppercase">
-            {selectedProduct ? "抽中结果" : "转盘说明"}
+            {selectedProduct ? "Resultat" : "Comment ca marche"}
           </p>
           {selectedProduct?.badge ? (
             <span
@@ -196,13 +217,13 @@ export function CategoryRoulette({
           {selectedProduct
             ? selectedProduct.name
             : isSpinning
-              ? "转盘正在替你做决定"
-              : "点一下按钮，帮你从这一系列里随机抽一份"}
+              ? "La roue choisit pour vous"
+              : "Lancez la roue pour tirer un produit au hasard dans cette serie"}
         </p>
         <p className="mt-3 text-sm leading-7 text-[#6d554c]">
           {selectedProduct
             ? selectedProduct.description
-            : "每次都会从当前系列的可售商品里随机抽取，适合选择困难时快速决定。"}
+            : "Chaque lancer pioche parmi les produits disponibles de cette serie, ideal pour choisir vite sans hesiter."}
         </p>
 
         <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -214,7 +235,7 @@ export function CategoryRoulette({
             onClick={handleSpin}
           >
             <Sparkles className="h-4 w-4" />
-            {isSpinning ? "转动中..." : selectedProduct ? "再抽一次" : "帮我抽一个"}
+            {isSpinning ? "Ca tourne..." : selectedProduct ? "Relancer" : "Lancer la roue"}
           </button>
 
           {selectedProduct ? (
@@ -223,7 +244,7 @@ export function CategoryRoulette({
               type="button"
               onClick={() => onAddProduct(selectedProduct.id)}
             >
-              就点这个
+              Je prends celui-ci
               <ArrowRight className="h-4 w-4" />
             </button>
           ) : null}
@@ -231,7 +252,7 @@ export function CategoryRoulette({
           <span className="text-sm font-semibold text-[#6a4d41]">
             {selectedProduct
               ? formatPrice(selectedProduct.priceCents)
-              : `当前系列共 ${category.products.length} 款`}
+              : `${category.products.length} choix dans cette serie`}
           </span>
         </div>
 

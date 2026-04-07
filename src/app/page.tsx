@@ -1,10 +1,10 @@
 import { MenuExperience } from "@/components/menu-experience";
-import { getMenuCatalog } from "@/lib/data";
+import { getBudgetOverview, getMenuCatalog } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const categories = await getMenuCatalog();
+  const [categories, budget] = await Promise.all([getMenuCatalog(), getBudgetOverview()]);
 
-  return <MenuExperience categories={categories} />;
+  return <MenuExperience budget={budget} categories={categories} />;
 }

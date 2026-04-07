@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { placeOrderWithBudget, updateMonthlyBudget } from "./budget";
 import {
   defaultCategoryColor,
   iconOptionValues,
@@ -132,6 +133,28 @@ export async function deleteProductAction(formData: FormData) {
     where: {
       id,
     },
+  });
+
+  revalidatePath("/");
+  revalidatePath("/admin");
+}
+
+export async function updateBudgetSettingsAction(formData: FormData) {
+  const monthlyBudgetCents = getPriceCents(formData, "monthlyBudget");
+
+  await prisma.$transaction(async (tx) => {
+    await updateMonthlyBudget(tx, monthlyBudgetCents);
+  });
+
+  revalidatePath("/");
+  revalidatePath("/admin");
+}
+
+export async function placeOrderAction(formData: FormData) {
+  const totalCents = getIntValue(formData, "totalCents", 0);
+
+  await prisma.$transaction(async (tx) => {
+    await placeOrderWithBudget(tx, totalCents);
   });
 
   revalidatePath("/");

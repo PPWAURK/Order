@@ -25,3 +25,12 @@ export type AdminCategory = MenuCategory & {
     products: number;
   };
 };
+
+export type BudgetSummary = {
+  availableBudgetCents: number;
+  carryoverCents: number;
+  currentMonthBudgetCents: number;
+  currentMonthLabel: string;
+  currentMonthSpentCents: number;
+  monthlyBudgetCents: number;
+};

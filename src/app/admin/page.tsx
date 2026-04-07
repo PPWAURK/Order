@@ -14,6 +14,7 @@ import {
   createProductAction,
   deleteCategoryAction,
   deleteProductAction,
+  updateBudgetSettingsAction,
 } from "@/lib/actions";
 import {
   brandName,
@@ -21,13 +22,13 @@ import {
   formatPrice,
   iconOptionValues,
 } from "@/lib/catalog-data";
-import { getAdminCatalog } from "@/lib/data";
+import { getAdminCatalog, getBudgetOverview } from "@/lib/data";
 import { CategoryIcon } from "@/lib/icon-map";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const categories = await getAdminCatalog();
+  const [categories, budget] = await Promise.all([getAdminCatalog(), getBudgetOverview()]);
   const totalProducts = categories.reduce(
     (sum, category) => sum + category.products.length,
     0,
@@ -51,29 +52,29 @@ export default async function AdminPage() {
       <header className="border-b border-white/60 bg-[rgba(255,249,244,0.82)] backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-5 sm:px-6 lg:px-10">
           <div>
-            <p className="text-xs tracking-[0.24em] text-[#99705f] uppercase">Admin</p>
+            <p className="text-xs tracking-[0.24em] text-[#99705f] uppercase">Administration</p>
             <h1 className="mt-2 font-display text-4xl text-[#36261f]">
-              {brandName} 后台
+              Administration {brandName}
             </h1>
             <p className="mt-2 text-sm text-[#76584c]">
-              在这里新增或删除系列、商品，前台菜单会同步更新。
+              Ajoutez ou supprimez des series et des produits. La carte publique se met a jour immediatement.
             </p>
           </div>
           <Link
             className="inline-flex items-center gap-2 rounded-full border border-[#edd9cc] bg-white px-5 py-3 text-sm font-semibold text-[#5c4439] transition hover:bg-[#fff7f2]"
             href="/"
           >
-            返回菜单
+            Retour a la carte
           </Link>
         </div>
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-10 lg:py-10">
-        <section className="grid gap-4 md:grid-cols-3">
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-[30px] border border-white/70 bg-white/82 p-5 shadow-[0_18px_45px_rgba(144,100,82,0.08)]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs tracking-[0.24em] text-[#987060] uppercase">系列数</p>
+                <p className="text-xs tracking-[0.24em] text-[#987060] uppercase">Series</p>
                 <p className="mt-3 font-display text-5xl text-[#392821]">
                   {categories.length}
                 </p>
@@ -86,7 +87,7 @@ export default async function AdminPage() {
           <div className="rounded-[30px] border border-white/70 bg-white/82 p-5 shadow-[0_18px_45px_rgba(144,100,82,0.08)]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs tracking-[0.24em] text-[#987060] uppercase">商品数</p>
+                <p className="text-xs tracking-[0.24em] text-[#987060] uppercase">Produits</p>
                 <p className="mt-3 font-display text-5xl text-[#392821]">
                   {availableProducts}/{totalProducts}
                 </p>
@@ -99,13 +100,26 @@ export default async function AdminPage() {
           <div className="rounded-[30px] border border-white/70 bg-white/82 p-5 shadow-[0_18px_45px_rgba(144,100,82,0.08)]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs tracking-[0.24em] text-[#987060] uppercase">均价</p>
+                <p className="text-xs tracking-[0.24em] text-[#987060] uppercase">Prix moyen</p>
                 <p className="mt-3 font-display text-5xl text-[#392821]">
                   {formatPrice(averagePrice)}
                 </p>
               </div>
               <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#eef8ed]">
                 <Sparkles className="h-5 w-5 text-[#65996f]" />
+              </span>
+            </div>
+          </div>
+          <div className="rounded-[30px] border border-white/70 bg-white/82 p-5 shadow-[0_18px_45px_rgba(144,100,82,0.08)]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs tracking-[0.24em] text-[#987060] uppercase">Budget dispo</p>
+                <p className="mt-3 font-display text-5xl text-[#392821]">
+                  {formatPrice(budget.availableBudgetCents)}
+                </p>
+              </div>
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#fff7e5]">
+                <Sparkles className="h-5 w-5 text-[#c48a2d]" />
               </span>
             </div>
           </div>
@@ -117,10 +131,81 @@ export default async function AdminPage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs tracking-[0.24em] text-[#9a705f] uppercase">
-                    New category
+                    Budget mensuel
                   </p>
                   <h2 className="mt-2 font-display text-3xl text-[#382820]">
-                    添加系列
+                    Budget commandes
+                  </h2>
+                </div>
+                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#fff7e8]">
+                  <Sparkles className="h-5 w-5 text-[#c48a2d]" />
+                </span>
+              </div>
+
+              <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                <div className="rounded-[22px] border border-[#f0ddd0] bg-[#fffaf6] px-4 py-4">
+                  <p className="text-xs tracking-[0.22em] text-[#9a705f] uppercase">Disponible</p>
+                  <p className="mt-2 font-display text-3xl text-[#3d2b24]">
+                    {formatPrice(budget.availableBudgetCents)}
+                  </p>
+                </div>
+                <div className="rounded-[22px] border border-[#f0ddd0] bg-[#fffaf6] px-4 py-4">
+                  <p className="text-xs tracking-[0.22em] text-[#9a705f] uppercase">Report cumule</p>
+                  <p className="mt-2 font-display text-3xl text-[#3d2b24]">
+                    {formatPrice(budget.carryoverCents)}
+                  </p>
+                </div>
+                <div className="rounded-[22px] border border-[#f0ddd0] bg-[#fffaf6] px-4 py-4">
+                  <p className="text-xs tracking-[0.22em] text-[#9a705f] uppercase">
+                    Budget de {budget.currentMonthLabel}
+                  </p>
+                  <p className="mt-2 font-display text-3xl text-[#3d2b24]">
+                    {formatPrice(budget.currentMonthBudgetCents)}
+                  </p>
+                </div>
+                <div className="rounded-[22px] border border-[#f0ddd0] bg-[#fffaf6] px-4 py-4">
+                  <p className="text-xs tracking-[0.22em] text-[#9a705f] uppercase">Depense ce mois</p>
+                  <p className="mt-2 font-display text-3xl text-[#3d2b24]">
+                    {formatPrice(budget.currentMonthSpentCents)}
+                  </p>
+                </div>
+              </div>
+
+              <form action={updateBudgetSettingsAction} className="mt-6 space-y-4">
+                <label className="block space-y-2">
+                  <span className="text-sm font-semibold text-[#5f463d]">Budget mensuel en euros</span>
+                  <input
+                    className="w-full rounded-[20px] border border-[#eed9cd] bg-[#fffaf6] px-4 py-3 text-sm outline-none transition focus:border-[#d3ab98] focus:bg-white"
+                    defaultValue={(budget.monthlyBudgetCents / 100).toFixed(2)}
+                    min="0"
+                    name="monthlyBudget"
+                    required
+                    step="0.01"
+                    type="number"
+                  />
+                </label>
+
+                <p className="text-sm leading-7 text-[#7a5b50]">
+                  Le solde non utilise est reporte automatiquement au mois suivant. En modifiant le budget, vous mettez a jour l&apos;enveloppe du mois en cours.
+                </p>
+
+                <SubmitButton
+                  className="w-full bg-[#2f241f] text-white hover:bg-[#47362e]"
+                  pendingLabel="Enregistrement..."
+                >
+                  Enregistrer le budget
+                </SubmitButton>
+              </form>
+            </section>
+
+            <section className="rounded-[32px] border border-white/70 bg-white/86 p-6 shadow-[0_18px_50px_rgba(144,100,82,0.08)]">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs tracking-[0.24em] text-[#9a705f] uppercase">
+                    Nouvelle serie
+                  </p>
+                  <h2 className="mt-2 font-display text-3xl text-[#382820]">
+                    Ajouter une serie
                   </h2>
                 </div>
                 <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#fff3eb]">
@@ -130,18 +215,18 @@ export default async function AdminPage() {
 
               <form action={createCategoryAction} className="mt-6 space-y-4">
                 <label className="block space-y-2">
-                  <span className="text-sm font-semibold text-[#5f463d]">系列名称</span>
+                    <span className="text-sm font-semibold text-[#5f463d]">Nom de la serie</span>
                   <input
                     className="w-full rounded-[20px] border border-[#eed9cd] bg-[#fffaf6] px-4 py-3 text-sm outline-none transition focus:border-[#d3ab98] focus:bg-white"
                     name="name"
-                    placeholder="例如：季节限定"
+                    placeholder="Ex. : Editions saisonnieres"
                     required
                     type="text"
                   />
                 </label>
 
                 <label className="block space-y-2">
-                  <span className="text-sm font-semibold text-[#5f463d]">图标名称</span>
+                    <span className="text-sm font-semibold text-[#5f463d]">Nom de l&apos;icone</span>
                   <input
                     className="w-full rounded-[20px] border border-[#eed9cd] bg-[#fffaf6] px-4 py-3 text-sm outline-none transition focus:border-[#d3ab98] focus:bg-white"
                     list="icon-options"
@@ -158,7 +243,7 @@ export default async function AdminPage() {
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block space-y-2">
-                    <span className="text-sm font-semibold text-[#5f463d]">主题色</span>
+                    <span className="text-sm font-semibold text-[#5f463d]">Couleur</span>
                     <input
                       className="h-12 w-full rounded-[20px] border border-[#eed9cd] bg-[#fffaf6] px-3 outline-none transition focus:border-[#d3ab98] focus:bg-white"
                       defaultValue={defaultCategoryColor}
@@ -167,7 +252,7 @@ export default async function AdminPage() {
                     />
                   </label>
                   <label className="block space-y-2">
-                    <span className="text-sm font-semibold text-[#5f463d]">排序</span>
+                    <span className="text-sm font-semibold text-[#5f463d]">Ordre</span>
                     <input
                       className="w-full rounded-[20px] border border-[#eed9cd] bg-[#fffaf6] px-4 py-3 text-sm outline-none transition focus:border-[#d3ab98] focus:bg-white"
                       defaultValue="6"
@@ -180,16 +265,16 @@ export default async function AdminPage() {
 
                 <SubmitButton
                   className="w-full bg-[#2f241f] text-white hover:bg-[#47362e]"
-                  pendingLabel="添加中..."
-                >
-                  添加系列
-                </SubmitButton>
+                      pendingLabel="Ajout..."
+                    >
+                      Ajouter la serie
+                    </SubmitButton>
               </form>
             </section>
 
             <section className="rounded-[32px] border border-white/70 bg-white/86 p-6 shadow-[0_18px_50px_rgba(144,100,82,0.08)]">
               <p className="text-xs tracking-[0.24em] text-[#9a705f] uppercase">Series</p>
-              <h2 className="mt-2 font-display text-3xl text-[#382820]">当前系列</h2>
+              <h2 className="mt-2 font-display text-3xl text-[#382820]">Series actuelles</h2>
 
               <div className="mt-5 space-y-4">
                 {categories.map((category) => (
@@ -212,10 +297,10 @@ export default async function AdminPage() {
                         <div>
                           <p className="font-semibold text-[#443029]">{category.name}</p>
                           <p className="mt-1 text-sm text-[#83655a]">
-                            {category._count.products} 个商品
+                            {category._count.products} {category._count.products > 1 ? "produits" : "produit"}
                           </p>
                           <p className="mt-2 text-xs text-[#9e7665]">
-                            排序 {category.sortOrder} · {category.themeColor}
+                            Ordre {category.sortOrder} · {category.themeColor}
                           </p>
                         </div>
                       </div>
@@ -224,10 +309,10 @@ export default async function AdminPage() {
                     <ConfirmActionButton
                       action={deleteCategoryAction}
                       className="mt-4 w-full border border-[#f0d8cd] bg-white text-[#8a584d] hover:bg-[#fff1ec]"
-                      confirmMessage={`确认删除“${category.name}”吗？这会同时删除该系列下的 ${category._count.products} 个商品。`}
+                      confirmMessage={`Supprimer \"${category.name}\" ? Cela supprimera aussi ${category._count.products} ${category._count.products > 1 ? "produits" : "produit"} de cette serie.`}
                       fields={{ id: category.id }}
-                      label="删除系列"
-                      pendingLabel="删除中..."
+                      label="Supprimer la serie"
+                      pendingLabel="Suppression..."
                     />
                   </article>
                 ))}
@@ -240,10 +325,10 @@ export default async function AdminPage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs tracking-[0.24em] text-[#9a705f] uppercase">
-                    New product
+                    Nouveau produit
                   </p>
                   <h2 className="mt-2 font-display text-3xl text-[#382820]">
-                    添加商品
+                    Ajouter un produit
                   </h2>
                 </div>
                 <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#fff3eb]">
@@ -254,7 +339,7 @@ export default async function AdminPage() {
               {categories.length ? (
                 <form action={createProductAction} className="mt-6 grid gap-4 lg:grid-cols-2">
                   <label className="block space-y-2">
-                    <span className="text-sm font-semibold text-[#5f463d]">所属系列</span>
+                    <span className="text-sm font-semibold text-[#5f463d]">Serie</span>
                     <select
                       className="w-full rounded-[20px] border border-[#eed9cd] bg-[#fffaf6] px-4 py-3 text-sm outline-none transition focus:border-[#d3ab98] focus:bg-white"
                       defaultValue={categories[0]?.id}
@@ -269,28 +354,28 @@ export default async function AdminPage() {
                   </label>
 
                   <label className="block space-y-2">
-                    <span className="text-sm font-semibold text-[#5f463d]">商品名称</span>
+                    <span className="text-sm font-semibold text-[#5f463d]">Nom du produit</span>
                     <input
                       className="w-full rounded-[20px] border border-[#eed9cd] bg-[#fffaf6] px-4 py-3 text-sm outline-none transition focus:border-[#d3ab98] focus:bg-white"
                       name="name"
-                      placeholder="例如：桂花乌龙奶茶"
+                      placeholder="Ex. : The au lait a l'osmanthe"
                       required
                       type="text"
                     />
                   </label>
 
                   <label className="block space-y-2 lg:col-span-2">
-                    <span className="text-sm font-semibold text-[#5f463d]">商品描述</span>
+                    <span className="text-sm font-semibold text-[#5f463d]">Description</span>
                     <textarea
                       className="min-h-28 w-full rounded-[20px] border border-[#eed9cd] bg-[#fffaf6] px-4 py-3 text-sm outline-none transition focus:border-[#d3ab98] focus:bg-white"
                       name="description"
-                      placeholder="写一点口味、食材或场景描述"
+                      placeholder="Decrivez le gout, les ingredients ou le moment ideal"
                       required
                     />
                   </label>
 
                   <label className="block space-y-2">
-                    <span className="text-sm font-semibold text-[#5f463d]">价格</span>
+                    <span className="text-sm font-semibold text-[#5f463d]">Prix</span>
                     <input
                       className="w-full rounded-[20px] border border-[#eed9cd] bg-[#fffaf6] px-4 py-3 text-sm outline-none transition focus:border-[#d3ab98] focus:bg-white"
                       min="0"
@@ -303,17 +388,17 @@ export default async function AdminPage() {
                   </label>
 
                   <label className="block space-y-2">
-                    <span className="text-sm font-semibold text-[#5f463d]">标签</span>
+                    <span className="text-sm font-semibold text-[#5f463d]">Badge</span>
                     <input
                       className="w-full rounded-[20px] border border-[#eed9cd] bg-[#fffaf6] px-4 py-3 text-sm outline-none transition focus:border-[#d3ab98] focus:bg-white"
                       name="badge"
-                      placeholder="招牌 / 新品 / 限定"
+                      placeholder="Signature / Nouveau / Edition limitee"
                       type="text"
                     />
                   </label>
 
                   <label className="block space-y-2 lg:col-span-2">
-                    <span className="text-sm font-semibold text-[#5f463d]">图片链接</span>
+                    <span className="text-sm font-semibold text-[#5f463d]">URL de l&apos;image</span>
                     <input
                       className="w-full rounded-[20px] border border-[#eed9cd] bg-[#fffaf6] px-4 py-3 text-sm outline-none transition focus:border-[#d3ab98] focus:bg-white"
                       name="imageUrl"
@@ -323,7 +408,7 @@ export default async function AdminPage() {
                   </label>
 
                   <label className="block space-y-2">
-                    <span className="text-sm font-semibold text-[#5f463d]">排序</span>
+                    <span className="text-sm font-semibold text-[#5f463d]">Ordre</span>
                     <input
                       className="w-full rounded-[20px] border border-[#eed9cd] bg-[#fffaf6] px-4 py-3 text-sm outline-none transition focus:border-[#d3ab98] focus:bg-white"
                       defaultValue="1"
@@ -340,21 +425,21 @@ export default async function AdminPage() {
                       name="isAvailable"
                       type="checkbox"
                     />
-                    立即上架
+                    Disponible immediatement
                   </label>
 
                   <div className="lg:col-span-2">
                     <SubmitButton
                       className="w-full bg-[#2f241f] text-white hover:bg-[#47362e]"
-                      pendingLabel="添加中..."
+                      pendingLabel="Ajout..."
                     >
-                      添加商品
+                      Ajouter le produit
                     </SubmitButton>
                   </div>
                 </form>
               ) : (
                 <div className="mt-6 rounded-[26px] border border-dashed border-[#ecd8ca] bg-[#fff8f2] px-5 py-6 text-sm leading-7 text-[#806056]">
-                  还没有系列，先在左侧创建系列后才能添加商品。
+                  Aucune serie pour le moment. Creez-en d&apos;abord une a gauche avant d&apos;ajouter un produit.
                 </div>
               )}
             </section>
@@ -379,7 +464,7 @@ export default async function AdminPage() {
                       </span>
                       <div>
                         <p className="text-xs tracking-[0.24em] text-[#9a705f] uppercase">
-                          Product list
+                            Liste des produits
                         </p>
                         <h3 className="mt-1 font-display text-3xl text-[#382820]">
                           {category.name}
@@ -387,7 +472,7 @@ export default async function AdminPage() {
                       </div>
                     </div>
                     <span className="rounded-full bg-[#fff4ec] px-4 py-2 text-sm font-semibold text-[#7c5d52]">
-                      {category.products.length} 个商品
+                      {category.products.length} {category.products.length > 1 ? "produits" : "produit"}
                     </span>
                   </div>
 
@@ -402,7 +487,7 @@ export default async function AdminPage() {
                             <div className="flex flex-wrap items-center gap-3">
                               <p className="font-semibold text-[#433029]">{product.name}</p>
                               <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#7d6155]">
-                                {product.isAvailable ? "上架中" : "已下架"}
+                                {product.isAvailable ? "Disponible" : "Indisponible"}
                               </span>
                               {product.badge ? (
                                 <span className="rounded-full bg-[#fff0f4] px-3 py-1 text-xs font-semibold text-[#aa6073]">
@@ -414,9 +499,9 @@ export default async function AdminPage() {
                               {product.description}
                             </p>
                             <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-[#9c7565]">
-                              <span>排序 {product.sortOrder}</span>
+                              <span>Ordre {product.sortOrder}</span>
                               <span>{formatPrice(product.priceCents)}</span>
-                              <span>{product.imageUrl ? "有图片" : "占位插画"}</span>
+                              <span>{product.imageUrl ? "Avec image" : "Illustration seule"}</span>
                             </div>
                           </div>
 
@@ -424,10 +509,10 @@ export default async function AdminPage() {
                             <ConfirmActionButton
                               action={deleteProductAction}
                               className="border border-[#f0d8cd] bg-white text-[#8a584d] hover:bg-[#fff1ec]"
-                              confirmMessage={`确认删除商品“${product.name}”吗？`}
+                              confirmMessage={`Supprimer le produit \"${product.name}\" ?`}
                               fields={{ id: product.id }}
-                              label="删除商品"
-                              pendingLabel="删除中..."
+                              label="Supprimer le produit"
+                              pendingLabel="Suppression..."
                             />
                           </div>
                         </div>
@@ -435,7 +520,7 @@ export default async function AdminPage() {
                     </div>
                   ) : (
                     <div className="mt-6 rounded-[24px] border border-dashed border-[#ecd8ca] bg-[#fff8f2] px-5 py-6 text-sm leading-7 text-[#806056]">
-                      这个系列还没有商品，可以直接用上方表单补充。
+                      Cette serie n&apos;a pas encore de produit. Utilisez le formulaire ci-dessus pour en ajouter.
                     </div>
                   )}
                 </article>

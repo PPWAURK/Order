@@ -9,8 +9,8 @@ const fredoka = Fredoka({
 });
 
 export const metadata: Metadata = {
-  title: "Charene 的专属菜单",
-  description: "Charene 的可爱风电子菜单和后台管理站点。",
+  title: "Le menu de Charene",
+  description: "Le menu gourmand de Charene avec sa vitrine publique et son espace d'administration.",
 };
 
 export default function RootLayout({
@@ -19,7 +19,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN" className={`${fredoka.variable} h-full antialiased`}>
+    <html lang="fr-FR" className={`${fredoka.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

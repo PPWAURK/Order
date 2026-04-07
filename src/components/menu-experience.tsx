@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -16,8 +17,10 @@ import {
   useId,
   useRef,
   useState,
+  useTransition,
 } from "react";
 
+import { placeOrderAction } from "@/lib/actions";
 import {
   brandName,
   buildSoftGradient,
@@ -27,9 +30,10 @@ import {
 } from "@/lib/catalog-data";
 import { CategoryRoulette } from "@/components/category-roulette";
 import { CategoryIcon } from "@/lib/icon-map";
-import type { MenuCategory } from "@/lib/types";
+import type { BudgetSummary, MenuCategory } from "@/lib/types";
 
 type MenuExperienceProps = {
+  budget: BudgetSummary;
   categories: MenuCategory[];
 };
 
@@ -56,7 +60,7 @@ function ProductVisual({
 }) {
   return (
     <div
-      aria-label={`${name} 商品展示`}
+      aria-label={`${name} visuel du produit`}
       className="relative aspect-[4/5] overflow-hidden rounded-[28px] border border-white/70"
       role="img"
       style={{
@@ -76,7 +80,7 @@ function ProductVisual({
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.7),transparent_45%),linear-gradient(180deg,transparent_20%,rgba(255,255,255,0.3)_100%)]" />
       <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
         <span className="inline-flex rounded-full bg-white/78 px-3 py-1 text-[11px] font-semibold tracking-[0.24em] text-[#6f574c] uppercase backdrop-blur">
-          Sweet Pick
+          Coup sucre
         </span>
         <Sparkles className="h-5 w-5 text-white/85" />
       </div>
@@ -89,20 +93,20 @@ function EmptyMenuState() {
     <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,#fff7ee,transparent_45%),linear-gradient(180deg,#fffaf4_0%,#fff3e9_100%)] px-6 text-center">
       <div className="max-w-xl space-y-5">
         <span className="inline-flex items-center rounded-full border border-[#f2d8c7] bg-white/70 px-4 py-2 text-xs font-semibold tracking-[0.26em] text-[#9a6c58] uppercase">
-          菜单暂时空空的
+          Carte vide pour le moment
         </span>
         <h1 className="font-display text-4xl text-[#3d2b23] sm:text-6xl">
-          先去后台加一点甜甜的新品吧
+          Ajoutez d&apos;abord quelques douceurs depuis l&apos;admin
         </h1>
         <p className="text-base leading-8 text-[#6e5750] sm:text-lg">
-          当前还没有上架商品，所以前台会先显示这张空白海报。去后台创建系列和商品后，菜单会立即更新。
+          Aucun produit n&apos;est disponible pour l&apos;instant. Creez des series et des produits dans l&apos;administration pour mettre la carte a jour.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Link
             className="inline-flex items-center gap-2 rounded-full bg-[#2f241f] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#47362e]"
             href="/admin"
           >
-            去后台添加内容
+            Aller a l&apos;administration
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
@@ -111,13 +115,16 @@ function EmptyMenuState() {
   );
 }
 
-export function MenuExperience({ categories }: MenuExperienceProps) {
+export function MenuExperience({ budget, categories }: MenuExperienceProps) {
+  const router = useRouter();
   const [activeCategory, setActiveCategory] = useState(categories[0]?.slug ?? "");
   const [cart, setCart] = useState<CartState>({});
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [checkoutError, setCheckoutError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const successTimerRef = useRef<number | null>(null);
+  const [isSubmittingOrder, startCheckoutTransition] = useTransition();
   const highlightId = useId();
   const allProducts = buildCartProductMap(categories);
 
@@ -202,18 +209,36 @@ export function MenuExperience({ categories }: MenuExperienceProps) {
   }
 
   function confirmCheckout() {
-    setCart({});
-    setIsCheckoutOpen(false);
-    setIsCartOpen(false);
-    setSuccessMessage("本次点单已经帮你打包好啦");
+    startCheckoutTransition(async () => {
+      setCheckoutError("");
 
-    if (successTimerRef.current) {
-      window.clearTimeout(successTimerRef.current);
-    }
+      try {
+        const formData = new FormData();
+        formData.set("totalCents", subtotal.toString());
 
-    successTimerRef.current = window.setTimeout(() => {
-      setSuccessMessage("");
-    }, 2800);
+        await placeOrderAction(formData);
+
+        setCart({});
+        setIsCheckoutOpen(false);
+        setIsCartOpen(false);
+        setSuccessMessage("Votre commande a bien ete confirmee.");
+        router.refresh();
+
+        if (successTimerRef.current) {
+          window.clearTimeout(successTimerRef.current);
+        }
+
+        successTimerRef.current = window.setTimeout(() => {
+          setSuccessMessage("");
+        }, 2800);
+      } catch (error) {
+        setCheckoutError(
+          error instanceof Error
+            ? error.message
+            : "Impossible de confirmer la commande pour le moment.",
+        );
+      }
+    });
   }
 
   const cartItems = allProducts.flatMap((product) => {
@@ -236,6 +261,8 @@ export function MenuExperience({ categories }: MenuExperienceProps) {
     (sum, item) => sum + item.quantity * item.priceCents,
     0,
   );
+  const isOverBudget = subtotal > budget.availableBudgetCents;
+  const projectedRemainingBudgetCents = budget.availableBudgetCents - subtotal;
 
   if (!categories.length) {
     return <EmptyMenuState />;
@@ -283,20 +310,20 @@ export function MenuExperience({ categories }: MenuExperienceProps) {
                 className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/58 px-4 py-2 text-sm font-semibold text-[#5f4338] backdrop-blur transition hover:bg-white/82"
                 href="/admin"
               >
-                后台管理
+                Administration
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
 
             <span className="inline-flex items-center rounded-full border border-white/70 bg-white/64 px-4 py-2 text-xs font-semibold tracking-[0.3em] text-[#9d6b56] uppercase backdrop-blur">
-              轻甜现点菜单
+              Carte gourmande du jour
             </span>
             <h1 className="mt-5 max-w-lg font-display text-5xl leading-[0.98] text-[#3a271f] sm:text-7xl">
               {brandName}
-              <span className="mt-2 block text-[#a35e66]">一屏挑完今天想吃的。</span>
+              <span className="mt-2 block text-[#a35e66]">Choisissez tout en un seul ecran.</span>
             </h1>
             <p className="mt-6 max-w-xl text-base leading-8 text-[#684f46] sm:text-lg">
-              奶茶、零食、主食、甜品和互动专区已经排好队。往下滑就能按系列挑选，右下角会一直帮你记住这一轮想点的东西。
+              Thes au lait, snacks, plats, desserts et surprises sont deja prets. Faites defiler pour choisir par serie, le panier garde vos envies en memoire.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -305,7 +332,7 @@ export function MenuExperience({ categories }: MenuExperienceProps) {
                 type="button"
                 onClick={() => scrollToCategory(categories[0]?.slug ?? "")}
               >
-                开始挑选
+                Commencer
                 <ArrowRight className="h-4 w-4" />
               </button>
               <button
@@ -313,24 +340,44 @@ export function MenuExperience({ categories }: MenuExperienceProps) {
                 type="button"
                 onClick={() => setIsCartOpen(true)}
               >
-                查看购物车
+                Voir le panier
                 <ShoppingBag className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="mt-10 grid gap-4 sm:grid-cols-3">
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-[26px] border border-white/70 bg-white/54 px-4 py-4 backdrop-blur">
-                <p className="text-xs tracking-[0.24em] text-[#9c705e] uppercase">系列</p>
+                <p className="text-xs tracking-[0.24em] text-[#9c705e] uppercase">Series</p>
                 <p className="mt-2 font-display text-4xl text-[#402d25]">{categories.length}</p>
               </div>
               <div className="rounded-[26px] border border-white/70 bg-white/54 px-4 py-4 backdrop-blur">
-                <p className="text-xs tracking-[0.24em] text-[#9c705e] uppercase">商品</p>
+                <p className="text-xs tracking-[0.24em] text-[#9c705e] uppercase">Produits</p>
                 <p className="mt-2 font-display text-4xl text-[#402d25]">{allProducts.length}</p>
               </div>
               <div className="rounded-[26px] border border-white/70 bg-white/54 px-4 py-4 backdrop-blur">
-                <p className="text-xs tracking-[0.24em] text-[#9c705e] uppercase">当前加购</p>
+                <p className="text-xs tracking-[0.24em] text-[#9c705e] uppercase">Panier</p>
                 <p className="mt-2 font-display text-4xl text-[#402d25]">{cartCount}</p>
               </div>
+              <div className="rounded-[26px] border border-white/70 bg-white/54 px-4 py-4 backdrop-blur">
+                <p className="text-xs tracking-[0.24em] text-[#9c705e] uppercase">Budget dispo</p>
+                <p className="mt-2 font-display text-4xl text-[#402d25]">
+                  {formatPrice(budget.availableBudgetCents)}
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 rounded-[26px] border border-white/70 bg-white/58 px-4 py-4 text-sm leading-7 text-[#684f46] backdrop-blur">
+              <p>
+                Budget mensuel actuel :
+                <span className="ml-2 font-semibold text-[#3f2c24]">
+                  {formatPrice(budget.currentMonthBudgetCents)}
+                </span>
+              </p>
+              <p>
+                Report disponible de {budget.currentMonthLabel} :
+                <span className="ml-2 font-semibold text-[#3f2c24]">
+                  {formatPrice(budget.carryoverCents)}
+                </span>
+              </p>
             </div>
           </motion.div>
 
@@ -349,14 +396,14 @@ export function MenuExperience({ categories }: MenuExperienceProps) {
               <div className="absolute inset-[10%] rounded-full border border-dashed border-white/55" />
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                 <span className="rounded-full border border-white/70 bg-white/75 px-4 py-2 text-xs font-semibold tracking-[0.24em] text-[#9b6656] uppercase backdrop-blur">
-                  Today&apos;s mix
+                  Selection du jour
                 </span>
                 <p className="mt-6 max-w-xs font-display text-5xl leading-none text-[#3c2c25] sm:text-6xl">
-                  Boba
-                  <span className="block text-[#995863]">&amp; Bites</span>
+                  Boissons
+                  <span className="block text-[#995863]">&amp; Gourmandises</span>
                 </p>
                 <p className="mt-5 max-w-xs text-sm leading-7 text-[#6c5348] sm:text-base">
-                  把想吃的先加进右下角，最后一起确认，一次逛完整张菜单。
+                  Ajoutez d&apos;abord ce qui vous tente, puis confirmez en une seule fois apres avoir parcouru toute la carte.
                 </p>
               </div>
 
@@ -460,7 +507,7 @@ export function MenuExperience({ categories }: MenuExperienceProps) {
                     </div>
                     <div>
                       <p className="text-sm tracking-[0.24em] text-[#a17361] uppercase">
-                        Series {index + 1}
+                        Serie {index + 1}
                       </p>
                       <h2 className="font-display text-4xl text-[#3b2a22]">
                         {category.name}
@@ -541,7 +588,7 @@ export function MenuExperience({ categories }: MenuExperienceProps) {
                               type="button"
                               onClick={() => addProduct(product.id)}
                             >
-                              加入点单
+                              Ajouter
                               <Plus className="h-4 w-4" />
                             </button>
                           )}
@@ -564,10 +611,12 @@ export function MenuExperience({ categories }: MenuExperienceProps) {
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/12">
           <ShoppingBag className="h-5 w-5" />
         </span>
-        <span className="flex flex-col items-start">
-          <span>购物车</span>
-          <span className="text-xs font-medium text-white/72">{cartCount} 件商品</span>
-        </span>
+          <span className="flex flex-col items-start">
+          <span>Panier</span>
+          <span className="text-xs font-medium text-white/72">
+            {cartCount} {cartCount > 1 ? "articles" : "article"}
+          </span>
+          </span>
       </button>
 
       <AnimatePresence>
@@ -590,8 +639,8 @@ export function MenuExperience({ categories }: MenuExperienceProps) {
             >
               <div className="flex items-center justify-between border-b border-[#efdcd0] px-5 py-5">
                 <div>
-                  <p className="text-xs tracking-[0.24em] text-[#9b705d] uppercase">Cart</p>
-                  <h2 className="font-display text-3xl text-[#3a271f]">本次点单</h2>
+                  <p className="text-xs tracking-[0.24em] text-[#9b705d] uppercase">Panier</p>
+                  <h2 className="font-display text-3xl text-[#3a271f]">Cette commande</h2>
                 </div>
                 <button
                   className="flex h-10 w-10 items-center justify-center rounded-full border border-[#ecd7c7] text-[#6e5146] transition hover:bg-white"
@@ -644,7 +693,7 @@ export function MenuExperience({ categories }: MenuExperienceProps) {
                             type="button"
                             onClick={() => updateCartQuantity(item.id, 0)}
                           >
-                            移除
+                            Retirer
                           </button>
                         </div>
                       </div>
@@ -652,30 +701,56 @@ export function MenuExperience({ categories }: MenuExperienceProps) {
                   </div>
                 ) : (
                   <div className="rounded-[28px] border border-dashed border-[#e8cdbf] bg-white/56 px-5 py-8 text-center">
-                    <p className="font-display text-2xl text-[#4a342b]">购物车还是空的</p>
+                    <p className="font-display text-2xl text-[#4a342b]">Le panier est encore vide</p>
                     <p className="mt-3 text-sm leading-7 text-[#87665b]">
-                      去菜单里挑一杯奶茶或一份甜点，右下角会立刻帮你记下来。
+                      Choisissez un the au lait, un snack ou un dessert, et il apparaitra aussitot ici.
                     </p>
                   </div>
                 )}
               </div>
 
               <div className="border-t border-[#efdcd0] px-5 py-5">
+                <div className="mb-4 rounded-[24px] border border-[#eed9cc] bg-[#fff8f3] px-4 py-4 text-sm text-[#75584d]">
+                  <div className="flex items-center justify-between gap-4">
+                    <span>Budget disponible</span>
+                    <span className="font-semibold text-[#4b342b]">
+                      {formatPrice(budget.availableBudgetCents)}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-4">
+                    <span>Apres cette commande</span>
+                    <span
+                      className={`font-semibold ${
+                        isOverBudget ? "text-[#b14e5b]" : "text-[#4b342b]"
+                      }`}
+                    >
+                      {formatPrice(projectedRemainingBudgetCents)}
+                    </span>
+                  </div>
+                </div>
                 <div className="flex items-center justify-between text-sm text-[#7b5a4f]">
-                  <span>小计</span>
+                  <span>Sous-total</span>
                   <span className="font-display text-3xl text-[#3b2a22]">
                     {formatPrice(subtotal)}
                   </span>
                 </div>
                 <button
                   className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#2f241f] px-5 py-4 text-sm font-semibold text-white transition hover:bg-[#47362e] disabled:cursor-not-allowed disabled:bg-[#b39a90]"
-                  disabled={!cartItems.length}
+                  disabled={!cartItems.length || isOverBudget}
                   type="button"
-                  onClick={() => setIsCheckoutOpen(true)}
+                  onClick={() => {
+                    setCheckoutError("");
+                    setIsCheckoutOpen(true);
+                  }}
                 >
-                  确认下单
+                  Confirmer la commande
                   <ArrowRight className="h-4 w-4" />
                 </button>
+                {isOverBudget ? (
+                  <p className="mt-3 text-sm text-[#b14e5b]">
+                    Le panier depasse le budget disponible. Reduisez la commande ou augmentez le budget mensuel.
+                  </p>
+                ) : null}
               </div>
             </motion.aside>
           </>
@@ -704,10 +779,10 @@ export function MenuExperience({ categories }: MenuExperienceProps) {
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-xs tracking-[0.24em] text-[#9f705d] uppercase">
-                      Checkout
+                      Validation
                     </p>
                     <h3 className="mt-2 font-display text-3xl text-[#392820]">
-                      确认这次点单
+                      Confirmer cette commande
                     </h3>
                   </div>
                   <button
@@ -737,10 +812,22 @@ export function MenuExperience({ categories }: MenuExperienceProps) {
                 </div>
 
                 <div className="mt-5 rounded-[24px] border border-[#f0ddd0] bg-white/70 px-4 py-4">
-                  <p className="text-sm leading-7 text-[#77584e]">
-                    这是演示版点单流程。确认后会显示成功提示并清空购物车，不会真的发送到厨房或收银台。
-                  </p>
+                  <div className="space-y-2 text-sm leading-7 text-[#77584e]">
+                    <p>
+                      Budget disponible avant validation : {formatPrice(budget.availableBudgetCents)}.
+                    </p>
+                    <p>
+                      Solde apres validation : {formatPrice(projectedRemainingBudgetCents)}.
+                    </p>
+                    <p>Le budget non utilise continue de se reporter automatiquement au mois suivant.</p>
+                  </div>
                 </div>
+
+                {checkoutError ? (
+                  <div className="mt-4 rounded-[22px] border border-[#f3c8cf] bg-[#fff4f5] px-4 py-3 text-sm text-[#9f4453]">
+                    {checkoutError}
+                  </div>
+                ) : null}
 
                 <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                   <button
@@ -748,14 +835,15 @@ export function MenuExperience({ categories }: MenuExperienceProps) {
                     type="button"
                     onClick={() => setIsCheckoutOpen(false)}
                   >
-                    再看看
+                    Continuer a parcourir
                   </button>
                   <button
-                    className="rounded-full bg-[#2f241f] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#47362e]"
+                    className="rounded-full bg-[#2f241f] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#47362e] disabled:cursor-not-allowed disabled:bg-[#b39a90]"
+                    disabled={isSubmittingOrder || isOverBudget}
                     type="button"
                     onClick={confirmCheckout}
                   >
-                    就这样，下单吧
+                    {isSubmittingOrder ? "Validation..." : "Valider la commande"}
                   </button>
                 </div>
               </div>

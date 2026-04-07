@@ -51,4 +51,35 @@ export async function ensureDatabase(prisma: PrismaClient) {
     CREATE INDEX IF NOT EXISTS "Product_categoryId_sortOrder_idx"
     ON "Product"("categoryId", "sortOrder");
   `);
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "BudgetSettings" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "monthlyBudgetCents" INTEGER NOT NULL DEFAULT 0,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "BudgetAllocation" (
+      "monthKey" TEXT NOT NULL PRIMARY KEY,
+      "amountCents" INTEGER NOT NULL,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "OrderRecord" (
+      "id" TEXT NOT NULL PRIMARY KEY,
+      "totalCents" INTEGER NOT NULL,
+      "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await prisma.$executeRawUnsafe(`
+    CREATE INDEX IF NOT EXISTS "OrderRecord_createdAt_idx"
+    ON "OrderRecord"("createdAt");
+  `);
 }

@@ -12,7 +12,7 @@ export function SubmitButton({
   children,
   className,
   disabled,
-  pendingLabel = "提交中...",
+  pendingLabel = "Envoi...",
   ...props
 }: SubmitButtonProps) {
   const { pending } = useFormStatus();

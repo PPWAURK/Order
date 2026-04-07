@@ -2,8 +2,9 @@ import "server-only";
 
 import { cache } from "react";
 
+import { getBudgetSummary } from "./budget";
 import { prisma } from "./prisma";
-import type { AdminCategory, MenuCategory } from "./types";
+import type { AdminCategory, BudgetSummary, MenuCategory } from "./types";
 
 export const getMenuCatalog = cache(async (): Promise<MenuCategory[]> => {
   const categories: MenuCategory[] = await prisma.category.findMany({
@@ -37,4 +38,8 @@ export const getAdminCatalog = cache(async (): Promise<AdminCategory[]> => {
   });
 
   return categories;
+});
+
+export const getBudgetOverview = cache(async (): Promise<BudgetSummary> => {
+  return getBudgetSummary(prisma);
 });
